@@ -28,31 +28,115 @@ spec:
             spec:
               type: object
               properties:
-                replicas:
-                  type: integer
-                  description: Number of Plane CE replicas
-                image:
+                planeVersion:
                   type: string
-                  description: Plane CE container image
+                  description: "Version of Plane to deploy."
+                ingress:
+                  type: object
+                  properties:
+                    appHost:
+                      type: string
+                      description: "Hostname for the Plane application."
+                    minioHost:
+                      type: string
+                      description: "Hostname for Minio."
+                    rabbitmqHost:
+                      type: string
+                      description: "Hostname for RabbitMQ."
+                    ingressClass:
+                      type: string
+                      description: "Ingress class to use."
+                postgres:
+                  type: object
+                  properties:
+                    local_setup:
+                      type: boolean
+                      description: "Deploy PostgreSQL locally."
+                    image:
+                      type: string
+                      description: "Docker image for PostgreSQL."
+                    servicePort:
+                      type: integer
+                      description: "Service port for PostgreSQL."
+                    cliConnectPort:
+                      type: integer
+                      description: "CLI connection port for PostgreSQL."
+                    volumeSize:
+                      type: string
+                      description: "Volume size for PostgreSQL."
+                    storageClass:
+                      type: string
+                      description: "Storage class for PostgreSQL."
+                redis:
+                  type: object
+                  properties:
+                    local_setup:
+                      type: boolean
+                      description: "Deploy Redis locally."
+                    image:
+                      type: string
+                      description: "Docker image for Redis."
+                    servicePort:
+                      type: integer
+                      description: "Service port for Redis."
+                    cliConnectPort:
+                      type: integer
+                      description: "CLI connection port for Redis."
+                    volumeSize:
+                      type: string
+                      description: "Volume size for Redis."
+                    storageClass:
+                      type: string
+                      description: "Storage class for Redis."
+                minio:
+                  type: object
+                  properties:
+                    local_setup:
+                      type: boolean
+                      description: "Deploy Minio locally."
+                    image:
+                      type: string
+                      description: "Docker image for Minio."
+                    servicePort:
+                      type: integer
+                      description: "Service port for Minio."
+                    cliConnectPort:
+                      type: integer
+                      description: "CLI connection port for Minio."
+                    volumeSize:
+                      type: string
+                      description: "Volume size for Minio."
+                    storageClass:
+                      type: string
+                      description: "Storage class for Minio."
+                rabbitmq:
+                  type: object
+                  properties:
+                    local_setup:
+                      type: boolean
+                      description: "Deploy RabbitMQ locally."
+                    image:
+                      type: string
+                      description: "Docker image for RabbitMQ."
+                    servicePort:
+                      type: integer
+                      description: "Service port for RabbitMQ."
+                    cliConnectPort:
+                      type: integer
+                      description: "CLI connection port for RabbitMQ."
+                    volumeSize:
+                      type: string
+                      description: "Volume size for RabbitMQ."
+                    storageClass:
+                      type: string
+                      description: "Storage class for RabbitMQ."
                 resources:
                   type: object
-                  description: Resource requests and limits
-                  properties:
-                    requests:
-                      type: object
-                      properties:
-                        cpu:
-                          type: string
-                        memory:
-                          type: string
-                    limits:
-                      type: object
-                      properties:
-                        cpu:
-                          type: string
-                        memory:
-                          type: string
+                  description: "Resource requests and limits for Plane CE."
                 config:
                   type: object
-                  additionalProperties: true
-                  description: Plane CE application-specific configuration
+                  additionalProperties:
+                    type: string
+                  description: "Configuration environment variables for Plane CE."
+              required:
+                - planeVersion

@@ -2,21 +2,48 @@ apiVersion: plane.co/v1
 kind: PlaneCE
 metadata:
   name: plane-sample
-  namespace: plane-namespace
 spec:
-  replicas: 3
-  image: "plane-ce:latest"
+  planeVersion: "stable"
+  ingress:
+    appHost: "plane.example.com"
+    minioHost: "plane-minio.example.com"
+    rabbitmqHost: "plane-mq.example.com"
+    ingressClass: "nginx"
+  postgres:
+    local_setup: true
+    image: "postgres:15.5-alpine"
+    servicePort: 5432
+    cliConnectPort: 5433
+    volumeSize: "5Gi"
+    storageClass: "longhorn"
+  redis:
+    local_setup: true
+    image: "redis:latest"
+    servicePort: 6379
+    cliConnectPort: 6380
+    volumeSize: "1Gi"
+    storageClass: "longhorn"
+  minio:
+    local_setup: true
+    image: "minio/minio:latest"
+    servicePort: 9000
+    cliConnectPort: 9001
+    volumeSize: "10Gi"
+    storageClass: "longhorn"
+  rabbitmq:
+    local_setup: true
+    image: "rabbitmq:latest"
+    servicePort: 5672
+    cliConnectPort: 5673
+    volumeSize: "1Gi"
+    storageClass: "longhorn"
   resources:
-    requests:
-      cpu: "500m"
-      memory: "256Mi"
     limits:
-      cpu: "1"
+      cpu: "500m"
       memory: "512Mi"
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
   config:
-    adminUser: "admin"
-    adminPassword: "supersecret"
-    database:
-      host: "db-host"
-      user: "plane_user"
-      password: "db_password"
+    ENV_VAR_1: "value1"
+    ENV_VAR_2: "value2"
