@@ -1,0 +1,45 @@
+apiVersion: plane.co/v1alpha1
+kind: PlaneCE
+metadata:
+  name: plane-production
+spec:
+  global:
+    environment: production
+    timezone: UTC
+
+  frontend:
+    replicaCount: 3
+    image:
+      repository: makeplane/plane-frontend
+      tag: v1.0.0
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+
+  backend:
+    replicaCount: 2
+    image:
+      repository: makeplane/plane-backend
+      tag: v1.0.0
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+
+  database:
+    postgresql:
+      external:
+        host: postgresql.example.com
+        database: plane-prod
+        username: plane-user
+
+  cache:
+    redis:
+      external:
+        host: redis.example.com
+
+  ingress:
+    enabled: true
+    host: plane.example.com
+    className: nginx

@@ -1,0 +1,355 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: planece.plane.co
+  annotations:
+    # Additional metadata for documentation and versioning
+    plane.co/description: "Custom Resource Definition for Plane Community Edition"
+    plane.co/version: "1.0.0"
+spec:
+  group: plane.co
+  names:
+    kind: PlaneCE
+    listKind: PlaneCEList
+    plural: planece
+    singular: planece
+    shortNames:
+      - plane
+      - planes
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: Status
+          type: string
+          jsonPath: .status.phase
+          description: Current deployment status
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+          description: Age of the Plane CE deployment
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: 
+                - frontend
+                - backend
+              properties:
+                # Enhanced Global Configuration
+                global:
+                  type: object
+                  properties:
+                    environment:
+                      type: string
+                      enum: 
+                        - development
+                        - staging
+                        - production
+                      default: production
+                    timezone:
+                      type: string
+                      description: "Timezone for the Plane CE deployment"
+                
+                # Comprehensive Frontend Configuration
+                frontend:
+                  type: object
+                  required: 
+                    - image
+                  properties:
+                    replicaCount:
+                      type: integer
+                      minimum: 1
+                      maximum: 10
+                      default: 2
+                      description: "Number of frontend replicas (min 1, max 10)"
+                    
+                    image:
+                      type: object
+                      required: 
+                        - repository
+                      properties:
+                        repository:
+                          type: string
+                          default: "makeplane/plane-frontend"
+                        tag:
+                          type: string
+                          default: "latest"
+                        pullPolicy:
+                          type: string
+                          enum: 
+                            - Always
+                            - IfNotPresent
+                            - Never
+                          default: IfNotPresent
+                    
+                    service:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - ClusterIP
+                            - NodePort
+                            - LoadBalancer
+                          default: ClusterIP
+                        port:
+                          type: integer
+                          minimum: 1
+                          maximum: 65535
+                          default: 3000
+                    
+                    resources:
+                      type: object
+                      properties:
+                        requests:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              pattern: "^(\\d+m?|\\d+\\.?\\d*)$"
+                              default: "100m"
+                            memory:
+                              type: string
+                              pattern: "^(\\d+|\\.\\d+)([Ei][Bb]?)?$"
+                              default: "256Mi"
+                        limits:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              pattern: "^(\\d+m?|\\d+\\.?\\d*)$"
+                              default: "500m"
+                            memory:
+                              type: string
+                              pattern: "^(\\d+|\\.\\d+)([Ei][Bb]?)?$"
+                              default: "512Mi"
+                
+                # Comprehensive Backend Configuration
+                backend:
+                  type: object
+                  required: 
+                    - image
+                  properties:
+                    replicaCount:
+                      type: integer
+                      minimum: 1
+                      maximum: 10
+                      default: 2
+                      description: "Number of backend replicas (min 1, max 10)"
+                    
+                    image:
+                      type: object
+                      required: 
+                        - repository
+                      properties:
+                        repository:
+                          type: string
+                          default: "makeplane/plane-backend"
+                        tag:
+                          type: string
+                          default: "latest"
+                        pullPolicy:
+                          type: string
+                          enum: 
+                            - Always
+                            - IfNotPresent
+                            - Never
+                          default: IfNotPresent
+                    
+                    service:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - ClusterIP
+                            - NodePort
+                            - LoadBalancer
+                          default: ClusterIP
+                        port:
+                          type: integer
+                          minimum: 1
+                          maximum: 65535
+                          default: 8000
+                    
+                    resources:
+                      type: object
+                      properties:
+                        requests:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              pattern: "^(\\d+m?|\\d+\\.?\\d*)$"
+                              default: "200m"
+                            memory:
+                              type: string
+                              pattern: "^(\\d+|\\.\\d+)([Ei][Bb]?)?$"
+                              default: "512Mi"
+                        limits:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                              pattern: "^(\\d+m?|\\d+\\.?\\d*)$"
+                              default: "1"
+                            memory:
+                              type: string
+                              pattern: "^(\\d+|\\.\\d+)([Ei][Bb]?)?$"
+                              default: "1Gi"
+                
+                # Enhanced Database Configuration
+                database:
+                  type: object
+                  properties:
+                    postgresql:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: true
+                        external:
+                          type: object
+                          properties:
+                            host:
+                              type: string
+                            port:
+                              type: integer
+                              minimum: 1
+                              maximum: 65535
+                              default: 5432
+                            database:
+                              type: string
+                              default: "plane"
+                            username:
+                              type: string
+                            password:
+                              type: string
+                              description: "Use a Kubernetes secret for sensitive data"
+                            sslMode:
+                              type: string
+                              enum:
+                                - disable
+                                - allow
+                                - prefer
+                                - require
+                                - verify-ca
+                                - verify-full
+                              default: disable
+                
+                # Enhanced Redis Configuration
+                cache:
+                  type: object
+                  properties:
+                    redis:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: true
+                        external:
+                          type: object
+                          properties:
+                            host:
+                              type: string
+                            port:
+                              type: integer
+                              minimum: 1
+                              maximum: 65535
+                              default: 6379
+                            password:
+                              type: string
+                              description: "Use a Kubernetes secret for sensitive data"
+                            sslEnabled:
+                              type: boolean
+                              default: false
+                
+                # Advanced Ingress Configuration
+                ingress:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
+                    host:
+                      type: string
+                    className:
+                      type: string
+                      default: "nginx"
+                    annotations:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    tls:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          secretName:
+                            type: string
+                          hosts:
+                            type: array
+                            items:
+                              type: string
+            
+            # Comprehensive Status Subresource
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Initializing
+                    - Running
+                    - Degraded
+                    - Failed
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - "Unknown"
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                podStatuses:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      ready:
+                        type: boolean
+                      restartCount:
+                        type: integer
+                      age:
+                        type: string
+  
+  # Conversion strategy for future versions
+  conversion:
+    strategy: Webhook
+    webhook:
+      conversionReviewVersions: ["v1", "v1beta1"]
+      clientConfig:
+        service:
+          name: plane-conversion-webhook
+          namespace: plane-system
+          path: /convert

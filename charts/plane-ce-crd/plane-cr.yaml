@@ -1,0 +1,22 @@
+apiVersion: plane.co/v1
+kind: PlaneCE
+metadata:
+  name: plane-sample
+  namespace: plane-namespace
+spec:
+  replicas: 3
+  image: "plane-ce:latest"
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "256Mi"
+    limits:
+      cpu: "1"
+      memory: "512Mi"
+  config:
+    adminUser: "admin"
+    adminPassword: "supersecret"
+    database:
+      host: "db-host"
+      user: "plane_user"
+      password: "db_password"
