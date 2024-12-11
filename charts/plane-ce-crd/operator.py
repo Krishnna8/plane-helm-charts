@@ -2,32 +2,32 @@ import kopf
 import kubernetes.client
 from kubernetes.client.rest import ApiException
 
-def create_deployment(name, namespace, replicas, image, resources, config):
-    """Creates a Kubernetes Deployment specification for Plane CE."""
+def create_deployment(name, namespace, replicas, image, resources, config, component):
+    """Creates a Kubernetes Deployment specification for Plane CE components."""
     return {
         "apiVersion": "apps/v1",
         "kind": "Deployment",
         "metadata": {
-            "name": name,
+            "name": f"{name}-{component}",
             "namespace": namespace,
         },
         "spec": {
             "replicas": replicas,
             "selector": {
                 "matchLabels": {
-                    "app": name
+                    "app": f"{name}-{component}"
                 }
             },
             "template": {
                 "metadata": {
                     "labels": {
-                        "app": name
+                        "app": f"{name}-{component}"
                     }
                 },
                 "spec": {
                     "containers": [
                         {
-                            "name": "plane-ce",
+                            "name": component,
                             "image": image,
                             "resources": resources,
                             "env": [
@@ -40,26 +40,20 @@ def create_deployment(name, namespace, replicas, image, resources, config):
         }
     }
 
-def create_service(name, namespace):
-    """Creates a Kubernetes Service specification for Plane CE."""
+def create_service(name, namespace, component, ports):
+    """Creates a Kubernetes Service specification for Plane CE components."""
     return {
         "apiVersion": "v1",
         "kind": "Service",
         "metadata": {
-            "name": name,
+            "name": f"{name}-{component}",
             "namespace": namespace,
         },
         "spec": {
             "selector": {
-                "app": name
+                "app": f"{name}-{component}"
             },
-            "ports": [
-                {
-                    "protocol": "TCP",
-                    "port": 80,
-                    "targetPort": 8080
-                }
-            ]
+            "ports": ports
         }
     }
 
@@ -75,81 +69,108 @@ def create_configmap(name, namespace, config):
         "data": config
     }
 
-@kopf.on.create('plane.co', 'v1', 'PlaneCE')
+@kopf.on.create('example.com', 'v1', 'planes')
 def create_fn(spec, name, namespace, **kwargs):
     """Handles the creation of a Plane custom resource."""
-    replicas = spec.get('replicas', 1)
-    image = spec.get('image', 'plane-ce:latest')
+    components = {
+        "web": {"replicas": 2, "image": spec.get('webImage', 'plane-ce-web:latest')},
+        "space": {"replicas": 1, "image": spec.get('spaceImage', 'plane-ce-space:latest')},
+        "live": {"replicas": 1, "image": spec.get('liveImage', 'plane-ce-live:latest')},
+        "api": {"replicas": 2, "image": spec.get('apiImage', 'plane-ce-api:latest')},
+        "worker": {"replicas": 2, "image": spec.get('workerImage', 'plane-ce-worker:latest')},
+        "beat-worker": {"replicas": 1, "image": spec.get('beatWorkerImage', 'plane-ce-beat-worker:latest')}
+    }
+
     resources = spec.get('resources', {})
     config = spec.get('config', {})
-
-    deployment = create_deployment(name, namespace, replicas, image, resources, config)
-    service = create_service(name, namespace)
-    configmap = create_configmap(f"{name}-config", namespace, config)
 
     api_apps = kubernetes.client.AppsV1Api()
     api_core = kubernetes.client.CoreV1Api()
 
+    for component, details in components.items():
+        deployment = create_deployment(name, namespace, details['replicas'], details['image'], resources, config, component)
+        service = create_service(name, namespace, component, ports=[{"protocol": "TCP", "port": 80, "targetPort": 8080}])
+
+        try:
+            # Create the Deployment
+            api_apps.create_namespaced_deployment(namespace=namespace, body=deployment)
+            kopf.info(f"Deployment {name}-{component} created.")
+
+            # Create the Service
+            api_core.create_namespaced_service(namespace=namespace, body=service)
+            kopf.info(f"Service {name}-{component} created.")
+
+        except ApiException as e:
+            raise kopf.TemporaryError(f"Error creating {component} resources: {e}", delay=30)
+
+    # Create the ConfigMap
+    configmap = create_configmap(f"{name}-config", namespace, config)
     try:
-        # Create the ConfigMap
         api_core.create_namespaced_config_map(namespace=namespace, body=configmap)
         kopf.info(f"ConfigMap {name}-config created.")
-
-        # Create the Deployment
-        api_apps.create_namespaced_deployment(namespace=namespace, body=deployment)
-        kopf.info(f"Deployment {name} created.")
-
-        # Create the Service
-        api_core.create_namespaced_service(namespace=namespace, body=service)
-        kopf.info(f"Service {name} created.")
-
     except ApiException as e:
-        raise kopf.TemporaryError(f"Error creating resources: {e}", delay=30)
+        raise kopf.TemporaryError(f"Error creating ConfigMap: {e}", delay=30)
 
-@kopf.on.update('plane.co', 'v1', 'PlaneCE')
+@kopf.on.update('example.com', 'v1', 'planes')
 def update_fn(spec, name, namespace, **kwargs):
     """Handles updates to a Plane custom resource."""
-    replicas = spec.get('replicas', 1)
-    image = spec.get('image', 'plane-ce:latest')
+    components = {
+        "web": {"replicas": 2, "image": spec.get('webImage', 'plane-ce-web:latest')},
+        "space": {"replicas": 1, "image": spec.get('spaceImage', 'plane-ce-space:latest')},
+        "live": {"replicas": 1, "image": spec.get('liveImage', 'plane-ce-live:latest')},
+        "api": {"replicas": 2, "image": spec.get('apiImage', 'plane-ce-api:latest')},
+        "worker": {"replicas": 2, "image": spec.get('workerImage', 'plane-ce-worker:latest')},
+        "beat-worker": {"replicas": 1, "image": spec.get('beatWorkerImage', 'plane-ce-beat-worker:latest')}
+    }
+
     resources = spec.get('resources', {})
     config = spec.get('config', {})
 
-    deployment = create_deployment(name, namespace, replicas, image, resources, config)
-    configmap = create_configmap(f"{name}-config", namespace, config)
-
     api_apps = kubernetes.client.AppsV1Api()
     api_core = kubernetes.client.CoreV1Api()
 
+    for component, details in components.items():
+        deployment = create_deployment(name, namespace, details['replicas'], details['image'], resources, config, component)
+
+        try:
+            # Update the Deployment
+            api_apps.replace_namespaced_deployment(name=f"{name}-{component}", namespace=namespace, body=deployment)
+            kopf.info(f"Deployment {name}-{component} updated.")
+        except ApiException as e:
+            raise kopf.TemporaryError(f"Error updating {component} resources: {e}", delay=30)
+
+    # Update the ConfigMap
+    configmap = create_configmap(f"{name}-config", namespace, config)
     try:
-        # Update the ConfigMap
         api_core.replace_namespaced_config_map(name=f"{name}-config", namespace=namespace, body=configmap)
         kopf.info(f"ConfigMap {name}-config updated.")
-
-        # Update the Deployment
-        api_apps.replace_namespaced_deployment(name=name, namespace=namespace, body=deployment)
-        kopf.info(f"Deployment {name} updated.")
-
     except ApiException as e:
-        raise kopf.TemporaryError(f"Error updating resources: {e}", delay=30)
+        raise kopf.TemporaryError(f"Error updating ConfigMap: {e}", delay=30)
 
-@kopf.on.delete('plane.co', 'v1', 'PlaneCE')
+@kopf.on.delete('example.com', 'v1', 'planes')
 def delete_fn(name, namespace, **kwargs):
     """Handles deletion of a Plane custom resource."""
+    components = ["web", "space", "live", "api", "worker", "beat-worker"]
+
     api_apps = kubernetes.client.AppsV1Api()
     api_core = kubernetes.client.CoreV1Api()
 
+    for component in components:
+        try:
+            # Delete the Deployment
+            api_apps.delete_namespaced_deployment(name=f"{name}-{component}", namespace=namespace)
+            kopf.info(f"Deployment {name}-{component} deleted.")
+
+            # Delete the Service
+            api_core.delete_namespaced_service(name=f"{name}-{component}", namespace=namespace)
+            kopf.info(f"Service {name}-{component} deleted.")
+
+        except ApiException as e:
+            kopf.warning(f"Error deleting {component} resources: {e}")
+
+    # Delete the ConfigMap
     try:
-        # Delete the Deployment
-        api_apps.delete_namespaced_deployment(name=name, namespace=namespace)
-        kopf.info(f"Deployment {name} deleted.")
-
-        # Delete the Service
-        api_core.delete_namespaced_service(name=name, namespace=namespace)
-        kopf.info(f"Service {name} deleted.")
-
-        # Delete the ConfigMap
         api_core.delete_namespaced_config_map(name=f"{name}-config", namespace=namespace)
         kopf.info(f"ConfigMap {name}-config deleted.")
-
     except ApiException as e:
-        kopf.warning(f"Error deleting resources: {e}")
+        kopf.warning(f"Error deleting ConfigMap: {e}")

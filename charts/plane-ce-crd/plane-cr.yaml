@@ -1,49 +1,25 @@
-apiVersion: plane.co/v1
-kind: PlaneCE
+apiVersion: example.com/v1
+kind: Plane
 metadata:
-  name: plane-sample
+  name: example-plane
+  namespace: default
 spec:
-  planeVersion: "stable"
-  ingress:
-    appHost: "plane.example.com"
-    minioHost: "plane-minio.example.com"
-    rabbitmqHost: "plane-mq.example.com"
-    ingressClass: "nginx"
-  postgres:
-    local_setup: true
-    image: "postgres:15.5-alpine"
-    servicePort: 5432
-    cliConnectPort: 5433
-    volumeSize: "5Gi"
-    storageClass: "longhorn"
-  redis:
-    local_setup: true
-    image: "redis:latest"
-    servicePort: 6379
-    cliConnectPort: 6380
-    volumeSize: "1Gi"
-    storageClass: "longhorn"
-  minio:
-    local_setup: true
-    image: "minio/minio:latest"
-    servicePort: 9000
-    cliConnectPort: 9001
-    volumeSize: "10Gi"
-    storageClass: "longhorn"
-  rabbitmq:
-    local_setup: true
-    image: "rabbitmq:latest"
-    servicePort: 5672
-    cliConnectPort: 5673
-    volumeSize: "1Gi"
-    storageClass: "longhorn"
+  webImage: plane-ce-web:latest
+  spaceImage: plane-ce-space:latest
+  liveImage: plane-ce-live:latest
+  apiImage: plane-ce-api:latest
+  workerImage: plane-ce-worker:latest
+  beatWorkerImage: plane-ce-beat-worker:latest
+  replicas:
+    web: 2
+    space: 1
+    live: 1
+    api: 2
+    worker: 2
+    beatWorker: 1
   resources:
-    limits:
-      cpu: "500m"
-      memory: "512Mi"
-    requests:
-      cpu: "250m"
-      memory: "256Mi"
+    memory: "512Mi"
+    cpu: "250m"
   config:
-    ENV_VAR_1: "value1"
-    ENV_VAR_2: "value2"
+    DATABASE_URL: "postgresql://user:password@db.example.com:5432/plane"
+    REDIS_URL: "redis://redis.example.com:6379"
